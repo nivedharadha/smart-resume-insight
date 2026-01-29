@@ -11,11 +11,11 @@ serve(async (req) => {
   }
 
   try {
-    const { resumeText, jobDescription } = await req.json();
+    const { resumeUrl, jobDescription } = await req.json();
 
-    if (!resumeText || !jobDescription) {
+    if (!resumeUrl || !jobDescription) {
       return new Response(
-        JSON.stringify({ error: "Resume text and job description are required" }),
+        JSON.stringify({ error: "Resume URL and job description are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -29,31 +29,52 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert ATS (Applicant Tracking System) resume analyzer. Your task is to compare a resume against a job description and provide detailed analysis.
+    // Fetch the PDF content as base64 for the AI to analyze
+    const pdfResponse = await fetch(resumeUrl);
+    if (!pdfResponse.ok) {
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch resume PDF" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    const pdfBytes = await pdfResponse.arrayBuffer();
+    const uint8Array = new Uint8Array(pdfBytes);
+    
+    // Convert to base64 in chunks to avoid stack overflow
+    let binary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.slice(i, i + chunkSize);
+      binary += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    const base64Pdf = btoa(binary);
 
-Analyze the resume and job description, then respond with a JSON object containing:
+    const systemPrompt = `You are an expert ATS (Applicant Tracking System) resume analyzer. Your task is to analyze a resume PDF and compare it against a job description to provide detailed analysis.
+
+Analyze the resume content and job description, then respond with a JSON object containing:
 1. matchPercentage: A number from 0-100 representing how well the resume matches the job requirements
-2. extractedSkills: An array of skills found in the RESUME that are also relevant to the job
-3. missingSkills: An array of important skills from the JOB DESCRIPTION that are NOT in the resume
+2. extractedSkills: An array of skills found in the RESUME that are also relevant to the job (max 15)
+3. missingSkills: An array of important skills from the JOB DESCRIPTION that are NOT in the resume (max 10)
 4. improvementTips: An array of 3-5 specific, actionable suggestions to improve the resume for this job
 
 Consider:
 - Technical skills and technologies
-- Soft skills and competencies
+- Soft skills and competencies  
 - Experience requirements
 - Keywords and industry terms
 - Quantifiable achievements
 
-Respond ONLY with valid JSON, no additional text.`;
+Respond ONLY with valid JSON, no additional text or markdown formatting.`;
 
-    const userPrompt = `RESUME:
-${resumeText}
+    const userPrompt = `Please analyze this resume against the following job description.
 
 JOB DESCRIPTION:
 ${jobDescription}
 
-Analyze how well this resume matches the job description.`;
+The resume PDF content is provided. Extract all relevant information including skills, experience, education, and achievements to perform a comprehensive ATS analysis.`;
 
+    // Use Gemini which has document/vision capabilities
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -61,10 +82,21 @@ Analyze how well this resume matches the job description.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          { 
+            role: "user", 
+            content: [
+              { type: "text", text: userPrompt },
+              { 
+                type: "image_url", 
+                image_url: { 
+                  url: `data:application/pdf;base64,${base64Pdf}` 
+                } 
+              }
+            ]
+          },
         ],
         temperature: 0.3,
       }),

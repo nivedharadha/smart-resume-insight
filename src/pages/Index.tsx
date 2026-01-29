@@ -8,10 +8,6 @@ import FileUpload from "@/components/FileUpload";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Sparkles, FileSearch, Target, Zap } from "lucide-react";
-import * as pdfjsLib from "pdfjs-dist";
-
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 const Index = () => {
   const navigate = useNavigate();
@@ -19,23 +15,6 @@ const Index = () => {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  const extractTextFromPDF = async (file: File): Promise<string> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = "";
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(" ");
-      fullText += pageText + "\n";
-    }
-
-    return fullText;
-  };
 
   const handleAnalyze = async () => {
     if (!resumeFile || !jobDescription.trim()) {
@@ -50,16 +29,9 @@ const Index = () => {
     setIsAnalyzing(true);
 
     try {
-      // Extract text from PDF
-      const resumeText = await extractTextFromPDF(resumeFile);
-
-      if (!resumeText.trim()) {
-        throw new Error("Could not extract text from PDF. Please ensure the PDF contains selectable text.");
-      }
-
       // Upload resume to storage
       const fileName = `${Date.now()}-${resumeFile.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("resumes")
         .upload(fileName, resumeFile);
 
@@ -73,11 +45,14 @@ const Index = () => {
         .from("resumes")
         .getPublicUrl(fileName);
 
-      // Call AI analysis function
+      // Call AI analysis function with file URL
       const { data: analysisData, error: analysisError } = await supabase.functions.invoke(
         "analyze-resume",
         {
-          body: { resumeText, jobDescription },
+          body: { 
+            resumeUrl: urlData.publicUrl,
+            jobDescription 
+          },
         }
       );
 

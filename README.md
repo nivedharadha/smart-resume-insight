@@ -17,21 +17,21 @@ A powerful web application built with React and Supabase, featuring specialized 
 * **Centralized Management:** Overview of all system records and user activities.
 * **Database Control:** Direct interface with Supabase tables to manage data integrity.
 * **Metrics:** Real-time visualization of app performance.
-* public/screenshots/Admin.jpg
+ public/screenshots/Admin.jpg
 
 ### 📝 Home Page
 
 * **Structured Forms:** User-friendly interface for seamless data entry.
 * **Validation:** Real-time feedback to ensure high-quality data submission.
 * **Supabase Sync:** Instant updates to the backend upon submission.
-* public/screenshots/Home.jpg
+  public/screenshots/Home.jpg
 
 ### 📊 Analyzer Page
 
 * **Data Processing:** Automated analysis of input data.
 * **Visual Reports:** (Optional: Charts/Graphs) providing actionable insights.
 * **Export Options:** Ability to save or share analysis results.
-* public/screenshots/Analysis.jpg
+  public/screenshots/Analysis.jpg
 
 ---
 

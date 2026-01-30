@@ -17,7 +17,7 @@ A powerful web application built with React and Supabase, featuring specialized 
 * **Centralized Management:** Overview of all system records and user activities.
 * **Database Control:** Direct interface with Supabase tables to manage data integrity.
 * **Metrics:** Real-time visualization of app performance.
- ![Admin page](https://github.com/nivedharadha/smart-resume-insight/tree/main/public/screenshots/Admin.jpg)
+ (https://github.com/nivedharadha/smart-resume-insight/tree/main/public/screenshots/Admin.jpg)
 
 ### 📝 Home Page
 

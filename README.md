@@ -1,73 +1,68 @@
-# Welcome to your Lovable project
+That is a classic, boilerplate README you have there. To make it truly professional and helpful for anyone (including yourself) looking at this project later, we should transform it from "How to use Lovable" to "What this app actually is."
 
-## Project info
+I’ve reorganized the structure to highlight your specific pages (**Admin, Input, and Analyzer**) and added placeholders where you can drop your screenshots.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+---
 
-## How can I edit this code?
+# 🚀 Project Name: [AI Resume Analyzer]
 
-There are several ways of editing your application.
+A powerful web application built with React and Supabase, featuring specialized tools for data input, administrative management, and intelligent analysis.
 
-**Use Lovable**
+## 🖼️ App Overview
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+| **Admin Dashboard** | **Data Input Portal** | **Analysis Engine** |
+| --- | --- | --- |
+|  |  |  |
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+## ✨ Key Features
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 🛠️ Admin Page
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+* **Centralized Management:** Overview of all system records and user activities.
+* **Database Control:** Direct interface with Supabase tables to manage data integrity.
+* **Metrics:** Real-time visualization of app performance.
+* public/screenshots/Admin.jpg
 
-Follow these steps:
+### 📝 Home Page
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+* **Structured Forms:** User-friendly interface for seamless data entry.
+* **Validation:** Real-time feedback to ensure high-quality data submission.
+* **Supabase Sync:** Instant updates to the backend upon submission.
+* public/screenshots/Home.jpg
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 📊 Analyzer Page
 
-# Step 3: Install the necessary dependencies.
-npm i
+* **Data Processing:** Automated analysis of input data.
+* **Visual Reports:** (Optional: Charts/Graphs) providing actionable insights.
+* **Export Options:** Ability to save or share analysis results.
+* public/screenshots/Analysis.jpg
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+---
 
-**Edit a file directly in GitHub**
+## 🛠️ Technology Stack
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+* **Frontend:** React, TypeScript, Vite
+* **Styling:** Tailwind CSS & shadcn-ui
+* **Backend/Database:** [Supabase](https://supabase.com)
+* **Deployment:** [Lovable](https://lovable.dev)
 
-**Use GitHub Codespaces**
+---
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 💻 Development Setup
 
-## What technologies are used for this project?
+If you want to work on this project locally:
 
-This project is built with:
+1. **Clone the repo:** `git clone <https://github.com/nivedharadha/smart-resume-insight>`
+2. **Install dependencies:** `npm install`
+3. **Setup Environment:** Create a `.env` file with your `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+4. **Run Dev Server:** `npm run dev`
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
+## 🚀 Deployment & Updates
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+* **Via Lovable:** Simply prompt your changes at [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID).
+* **Via GitHub:** Pushing to the `main` branch will automatically sync with the Lovable environment.
+* **Custom Domain:** Configured under **Project Settings > Domains**.

@@ -1,1 +1,7 @@
 project_id = "nzdljuvmyarxzxucybpg"
+
+[functions.analyze-resume]
+verify_jwt = false
+
+[functions.admin-setup]
+verify_jwt = false

@@ -1,8 +1,3 @@
-That is a classic, boilerplate README you have there. To make it truly professional and helpful for anyone (including yourself) looking at this project later, we should transform it from "How to use Lovable" to "What this app actually is."
-
-I’ve reorganized the structure to highlight your specific pages (**Admin, Input, and Analyzer**) and added placeholders where you can drop your screenshots.
-
----
 
 # 🚀 Project Name: [AI Resume Analyzer]
 
@@ -11,8 +6,7 @@ A powerful web application built with React and Supabase, featuring specialized 
 ## 🖼️ App Overview
 
 | **Admin Dashboard** | **Data Input Portal** | **Analysis Engine** |
-| --- | --- | --- |
-|  |  |  |
+
 
 ---
 

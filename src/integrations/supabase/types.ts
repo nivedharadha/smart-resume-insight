@@ -16,7 +16,9 @@ export type Database = {
     Tables: {
       analysis_records: {
         Row: {
+          access_token: string
           created_at: string
+          expires_at: string | null
           extracted_skills: string[] | null
           id: string
           improvement_tips: string[] | null
@@ -28,7 +30,9 @@ export type Database = {
           user_email: string | null
         }
         Insert: {
+          access_token?: string
           created_at?: string
+          expires_at?: string | null
           extracted_skills?: string[] | null
           id?: string
           improvement_tips?: string[] | null
@@ -40,7 +44,9 @@ export type Database = {
           user_email?: string | null
         }
         Update: {
+          access_token?: string
           created_at?: string
+          expires_at?: string | null
           extracted_skills?: string[] | null
           id?: string
           improvement_tips?: string[] | null

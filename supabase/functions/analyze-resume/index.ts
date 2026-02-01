@@ -1,9 +1,37 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Input validation helpers
+function validateResumeUrl(url: string, supabaseUrl: string): { valid: boolean; error?: string } {
+  try {
+    const parsed = new URL(url);
+    
+    // Only allow HTTPS
+    if (parsed.protocol !== 'https:') {
+      return { valid: false, error: 'Only HTTPS URLs allowed' };
+    }
+    
+    // Allowlist Supabase storage domain
+    const supabaseHost = new URL(supabaseUrl).hostname;
+    if (!parsed.hostname.includes(supabaseHost) && !parsed.hostname.includes('supabase.co')) {
+      return { valid: false, error: 'URL must be from authorized storage' };
+    }
+    
+    return { valid: true };
+  } catch {
+    return { valid: false, error: 'Invalid URL format' };
+  }
+}
+
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 320;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,34 +39,60 @@ serve(async (req) => {
   }
 
   try {
-    const { resumeUrl, jobDescription } = await req.json();
+    const { fileName, jobDescription } = await req.json();
 
-    if (!resumeUrl || !jobDescription) {
+    // Validate presence
+    if (!fileName || !jobDescription) {
       return new Response(
-        JSON.stringify({ error: "Resume URL and job description are required" }),
+        JSON.stringify({ error: "Resume file name and job description are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY is not configured");
+    // Validate file name
+    if (typeof fileName !== 'string' || fileName.length > 500) {
       return new Response(
-        JSON.stringify({ error: "AI service not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Invalid file name" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Fetch the PDF content as base64 for the AI to analyze
-    const pdfResponse = await fetch(resumeUrl);
-    if (!pdfResponse.ok) {
+    // Validate job description length (max 10,000 chars to prevent cost abuse)
+    if (typeof jobDescription !== 'string' || jobDescription.length > 10000) {
+      return new Response(
+        JSON.stringify({ error: "Job description must be under 10,000 characters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    
+    // Create admin client to access private bucket
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Download file from private bucket using service role
+    const { data: fileData, error: downloadError } = await supabaseAdmin.storage
+      .from("resumes")
+      .download(fileName);
+    
+    if (downloadError || !fileData) {
+      console.error("Download error:", downloadError);
       return new Response(
         JSON.stringify({ error: "Failed to fetch resume PDF" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    
-    const pdfBytes = await pdfResponse.arrayBuffer();
+
+    // Check file size (max 10MB)
+    if (fileData.size > 10 * 1024 * 1024) {
+      return new Response(
+        JSON.stringify({ error: "PDF must be under 10MB" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const pdfBytes = await fileData.arrayBuffer();
     const uint8Array = new Uint8Array(pdfBytes);
     
     // Convert to base64 in chunks to avoid stack overflow
@@ -49,6 +103,15 @@ serve(async (req) => {
       binary += String.fromCharCode.apply(null, Array.from(chunk));
     }
     const base64Pdf = btoa(binary);
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: "AI service not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const systemPrompt = `You are an expert ATS (Applicant Tracking System) resume analyzer. Your task is to analyze a resume PDF and compare it against a job description to provide detailed analysis.
 
@@ -170,7 +233,7 @@ The resume PDF content is provided. Extract all relevant information including s
   } catch (error) {
     console.error("Error in analyze-resume function:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "An error occurred processing your request" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

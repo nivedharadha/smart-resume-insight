@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import AnalysisResults from "@/components/AnalysisResults";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, FileText, Download } from "lucide-react";
+import { Loader2, ArrowLeft, FileText, Download, ShieldAlert } from "lucide-react";
 
 interface AnalysisRecord {
   id: string;
@@ -17,19 +17,31 @@ interface AnalysisRecord {
   extracted_skills: string[];
   missing_skills: string[];
   improvement_tips: string[];
+  access_token?: string;
 }
 
 const Results = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
   const { toast } = useToast();
   const [record, setRecord] = useState<AnalysisRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     const fetchRecord = async () => {
       if (!id) return;
 
       try {
+        // Set the access token as a session setting for RLS policy
+        if (token) {
+          await supabase.rpc("set_config", { 
+            setting_name: "app.access_token", 
+            setting_value: token 
+          }).maybeSingle();
+        }
+
         const { data, error } = await supabase
           .from("analysis_records")
           .select("*")
@@ -38,20 +50,30 @@ const Results = () => {
 
         if (error) {
           console.error("Error fetching record:", error);
-          toast({
-            title: "Error",
-            description: "Failed to load analysis results",
-            variant: "destructive",
-          });
+          // Check if it's a permission error
+          if (error.code === "PGRST116" || error.message?.includes("permission")) {
+            setAccessDenied(true);
+          } else {
+            toast({
+              title: "Error",
+              description: "Failed to load analysis results",
+              variant: "destructive",
+            });
+          }
           return;
         }
 
         if (!data) {
-          toast({
-            title: "Not found",
-            description: "Analysis record not found",
-            variant: "destructive",
-          });
+          // No data could mean access denied or not found
+          if (!token) {
+            setAccessDenied(true);
+          } else {
+            toast({
+              title: "Not found",
+              description: "Analysis record not found or link has expired",
+              variant: "destructive",
+            });
+          }
           return;
         }
 
@@ -69,7 +91,7 @@ const Results = () => {
     };
 
     fetchRecord();
-  }, [id, toast]);
+  }, [id, token, toast]);
 
   if (loading) {
     return (
@@ -79,6 +101,30 @@ const Results = () => {
           <div className="text-center">
             <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
             <p className="text-muted-foreground">Loading analysis results...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen gradient-hero">
+        <Header />
+        <div className="container flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <ShieldAlert className="w-16 h-16 text-destructive mx-auto mb-4" />
+            <h2 className="font-display text-2xl font-bold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground mb-6">
+              You don't have permission to view this analysis. <br />
+              The link may have expired or is invalid.
+            </p>
+            <Link to="/">
+              <Button>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Analyze New Resume
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

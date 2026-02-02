@@ -39,7 +39,7 @@ const Results = () => {
           await supabase.rpc("set_config", { 
             setting_name: "app.access_token", 
             setting_value: token 
-          }).maybeSingle();
+          });
         }
 
         const { data, error } = await supabase

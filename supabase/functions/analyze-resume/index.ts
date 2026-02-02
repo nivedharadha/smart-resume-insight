@@ -6,31 +6,45 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Input validation helpers
-function validateResumeUrl(url: string, supabaseUrl: string): { valid: boolean; error?: string } {
-  try {
-    const parsed = new URL(url);
-    
-    // Only allow HTTPS
-    if (parsed.protocol !== 'https:') {
-      return { valid: false, error: 'Only HTTPS URLs allowed' };
-    }
-    
-    // Allowlist Supabase storage domain
-    const supabaseHost = new URL(supabaseUrl).hostname;
-    if (!parsed.hostname.includes(supabaseHost) && !parsed.hostname.includes('supabase.co')) {
-      return { valid: false, error: 'URL must be from authorized storage' };
-    }
-    
-    return { valid: true };
-  } catch {
-    return { valid: false, error: 'Invalid URL format' };
-  }
+// Rate limiting helpers
+interface RateLimitCheck {
+  allowed: boolean;
+  remaining?: number;
 }
 
-function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email) && email.length <= 320;
+// deno-lint-ignore no-explicit-any
+async function checkRateLimit(
+  supabase: any,
+  identifier: string,
+  maxRequests: number = 5,
+  windowMinutes: number = 60
+): Promise<RateLimitCheck> {
+  const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
+  
+  const { data, error } = await supabase
+    .from("rate_limits")
+    .select("id")
+    .eq("identifier", identifier)
+    .eq("action", "analyze_resume")
+    .gte("timestamp", windowStart);
+  
+  if (error) {
+    console.error("Rate limit check error:", error);
+    return { allowed: true }; // Fail open to avoid breaking service
+  }
+  
+  const count = data?.length || 0;
+  return {
+    allowed: count < maxRequests,
+    remaining: Math.max(0, maxRequests - count - 1)
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+async function recordRateLimit(supabase: any, identifier: string) {
+  await supabase
+    .from("rate_limits")
+    .insert({ identifier, action: "analyze_resume" });
 }
 
 serve(async (req) => {
@@ -39,9 +53,37 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get client IP for rate limiting
+    const identifier = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+                      req.headers.get("x-real-ip") || 
+                      "unknown";
+
+    // Check rate limit (5 analyses per hour)
+    const rateLimitCheck = await checkRateLimit(supabaseAdmin, identifier);
+    
+    if (!rateLimitCheck.allowed) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Rate limit exceeded. You can analyze 5 resumes per hour. Please try again later." 
+        }),
+        { 
+          status: 429, 
+          headers: { 
+            ...corsHeaders, 
+            "Content-Type": "application/json",
+            "X-RateLimit-Remaining": "0",
+            "Retry-After": "3600"
+          } 
+        }
+      );
+    }
+
     const { fileName, jobDescription } = await req.json();
 
-    // Validate presence
     if (!fileName || !jobDescription) {
       return new Response(
         JSON.stringify({ error: "Resume file name and job description are required" }),
@@ -65,12 +107,6 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    
-    // Create admin client to access private bucket
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    
     // Download file from private bucket using service role
     const { data: fileData, error: downloadError } = await supabaseAdmin.storage
       .from("resumes")
@@ -219,6 +255,9 @@ The resume PDF content is provided. Extract all relevant information including s
       );
     }
 
+    // Record rate limit after successful analysis
+    await recordRateLimit(supabaseAdmin, identifier);
+
     // Validate and normalize the response
     const result = {
       matchPercentage: Math.min(100, Math.max(0, Number(analysisResult.matchPercentage) || 0)),
@@ -226,6 +265,13 @@ The resume PDF content is provided. Extract all relevant information including s
       missingSkills: Array.isArray(analysisResult.missingSkills) ? analysisResult.missingSkills : [],
       improvementTips: Array.isArray(analysisResult.improvementTips) ? analysisResult.improvementTips : [],
     };
+
+    console.log({
+      event: 'ai_analysis_complete',
+      identifier,
+      model: 'google/gemini-2.5-flash',
+      timestamp: new Date().toISOString()
+    });
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -39,16 +39,21 @@ const Index = () => {
     setIsAnalyzing(true);
 
     try {
-      // Upload resume to private storage bucket
-      const fileName = `${Date.now()}-${resumeFile.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("resumes")
-        .upload(fileName, resumeFile);
+      // Upload resume via secure edge function (with rate limiting and validation)
+      const formData = new FormData();
+      formData.append("file", resumeFile);
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        throw new Error("Failed to upload resume");
+      const { data: uploadData, error: uploadError } = await supabase.functions.invoke(
+        "upload-resume",
+        { body: formData }
+      );
+
+      if (uploadError || uploadData?.error) {
+        console.error("Upload error:", uploadError || uploadData?.error);
+        throw new Error(uploadData?.error || "Failed to upload resume");
       }
+
+      const fileName = uploadData.fileName;
 
       // Call AI analysis function with file name (function will access private bucket)
       const { data: analysisData, error: analysisError } = await supabase.functions.invoke(

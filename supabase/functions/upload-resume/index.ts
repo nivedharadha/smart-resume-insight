@@ -139,14 +139,28 @@ serve(async (req) => {
       );
     }
 
+    // Generate signed URL (24 hours) using service role
+    const { data: signedUrlData, error: urlError } = await supabaseAdmin.storage
+      .from("resumes")
+      .createSignedUrl(fileName, 86400);
+
+    if (urlError || !signedUrlData) {
+      console.error("Signed URL error:", urlError);
+      return new Response(
+        JSON.stringify({ error: "Failed to generate access URL" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Record rate limit
     await recordRateLimit(supabaseAdmin, identifier, "upload_resume");
 
-    // Return the file name for use in analysis
+    // Return the file name and signed URL for use in analysis
     return new Response(
       JSON.stringify({ 
         fileName,
-        originalName 
+        originalName,
+        signedUrl: signedUrlData.signedUrl
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

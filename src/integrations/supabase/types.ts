@@ -92,6 +92,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_access_token: {
+        Args: { record_id: string; token: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

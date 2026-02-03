@@ -16,7 +16,6 @@ interface AnalysisRecord {
   resume_file_url: string;
   job_description: string;
   match_percentage: number;
-  user_email: string | null;
   extracted_skills: string[] | null;
   missing_skills: string[] | null;
 }

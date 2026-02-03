@@ -4,7 +4,7 @@ import { FileText, Users } from "lucide-react";
 interface AnalysisRecord {
   id: string;
   match_percentage: number;
-  user_email: string | null;
+  created_at: string;
 }
 
 interface StatsCardsProps {
@@ -12,7 +12,8 @@ interface StatsCardsProps {
 }
 
 const StatsCards = ({ records }: StatsCardsProps) => {
-  const uniqueUsers = new Set(records.map((r) => r.user_email).filter(Boolean)).size;
+  // Count analyses (each record is one analysis)
+  const totalAnalyses = records.length;
   const avgScore = records.length > 0
     ? Math.round(records.reduce((sum, r) => sum + r.match_percentage, 0) / records.length)
     : 0;
@@ -30,10 +31,10 @@ const StatsCards = ({ records }: StatsCardsProps) => {
       </Card>
       <Card className="border-border/50 bg-card/50">
         <CardHeader className="pb-2">
-          <CardDescription>Unique Users</CardDescription>
+          <CardDescription>This Month</CardDescription>
           <CardTitle className="text-3xl font-display flex items-center gap-2">
             <Users className="w-6 h-6 text-primary" />
-            {uniqueUsers}
+            {records.filter(r => new Date(r.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length}
           </CardTitle>
         </CardHeader>
       </Card>

@@ -34,7 +34,6 @@ interface AnalysisRecord {
   resume_file_url: string;
   job_description: string;
   match_percentage: number;
-  user_email: string | null;
   extracted_skills: string[] | null;
   missing_skills: string[] | null;
 }
@@ -54,7 +53,6 @@ const RecordsTable = ({ records, onRecordDeleted }: RecordsTableProps) => {
     ? records.filter(
         (record) =>
           record.resume_file_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          record.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           record.job_description.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : records;
@@ -98,7 +96,7 @@ const RecordsTable = ({ records, onRecordDeleted }: RecordsTableProps) => {
         <div className="relative mt-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search by filename, email, or job description..."
+            placeholder="Search by filename or job description..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -112,7 +110,6 @@ const RecordsTable = ({ records, onRecordDeleted }: RecordsTableProps) => {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Resume</TableHead>
-                <TableHead>Email</TableHead>
                 <TableHead>Match %</TableHead>
                 <TableHead>Skills</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -121,7 +118,7 @@ const RecordsTable = ({ records, onRecordDeleted }: RecordsTableProps) => {
             <TableBody>
               {filteredRecords.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     {searchTerm ? "No records match your search" : "No records found"}
                   </TableCell>
                 </TableRow>
@@ -133,9 +130,6 @@ const RecordsTable = ({ records, onRecordDeleted }: RecordsTableProps) => {
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate" title={record.resume_file_name}>
                       {record.resume_file_name}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {record.user_email || "—"}
                     </TableCell>
                     <TableCell>
                       <span

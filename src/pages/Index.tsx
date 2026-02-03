@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,12 +9,58 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Sparkles, FileSearch, Target, Zap } from "lucide-react";
 
+const CACHE_KEY = "resume_analysis_cache";
+const CACHE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+interface CachedData {
+  jobDescription: string;
+  resumeFileName: string | null;
+  timestamp: number;
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Load cached data on mount
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const data: CachedData = JSON.parse(cached);
+        const now = Date.now();
+        
+        // Check if cache has expired
+        if (now - data.timestamp > CACHE_TIMEOUT) {
+          localStorage.removeItem(CACHE_KEY);
+          return;
+        }
+        
+        // Restore job description from cache
+        if (data.jobDescription) {
+          setJobDescription(data.jobDescription);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading cache:", error);
+      localStorage.removeItem(CACHE_KEY);
+    }
+  }, []);
+
+  // Save to cache when job description changes
+  useEffect(() => {
+    if (jobDescription.trim()) {
+      const cacheData: CachedData = {
+        jobDescription,
+        resumeFileName: resumeFile?.name || null,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+    }
+  }, [jobDescription, resumeFile]);
 
   const handleAnalyze = async () => {
     if (!resumeFile || !jobDescription.trim()) {

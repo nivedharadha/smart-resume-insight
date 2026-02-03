@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import AnalysisResults from "@/components/AnalysisResults";
@@ -23,6 +23,7 @@ interface AnalysisRecord {
 const Results = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const token = searchParams.get("token");
   const { toast } = useToast();
   const [record, setRecord] = useState<AnalysisRecord | null>(null);
@@ -98,6 +99,8 @@ const Results = () => {
               description: "Failed to load analysis results",
               variant: "destructive",
             });
+            // Redirect to analyze page on error
+            setTimeout(() => navigate("/"), 2000);
           }
           return;
         }
@@ -109,9 +112,11 @@ const Results = () => {
           } else {
             toast({
               title: "Not found",
-              description: "Analysis record not found or link has expired",
+              description: "Analysis record not found or link has expired. Redirecting...",
               variant: "destructive",
             });
+            // Redirect to analyze page after timeout
+            setTimeout(() => navigate("/"), 2000);
           }
           return;
         }
@@ -121,16 +126,18 @@ const Results = () => {
         console.error("Error:", error);
         toast({
           title: "Error",
-          description: "An unexpected error occurred",
+          description: "An unexpected error occurred. Redirecting...",
           variant: "destructive",
         });
+        // Redirect to analyze page on error
+        setTimeout(() => navigate("/"), 2000);
       } finally {
         setLoading(false);
       }
     };
 
     fetchRecord();
-  }, [id, token, toast]);
+  }, [id, token, toast, navigate]);
 
   if (loading) {
     return (

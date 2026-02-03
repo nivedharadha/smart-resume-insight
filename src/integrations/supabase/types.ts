@@ -27,7 +27,6 @@ export type Database = {
           missing_skills: string[] | null
           resume_file_name: string
           resume_file_url: string
-          user_email: string | null
         }
         Insert: {
           access_token?: string
@@ -41,7 +40,6 @@ export type Database = {
           missing_skills?: string[] | null
           resume_file_name: string
           resume_file_url: string
-          user_email?: string | null
         }
         Update: {
           access_token?: string
@@ -55,7 +53,6 @@ export type Database = {
           missing_skills?: string[] | null
           resume_file_name?: string
           resume_file_url?: string
-          user_email?: string | null
         }
         Relationships: []
       }

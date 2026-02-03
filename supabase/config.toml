@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.upload-resume]
 verify_jwt = false
+
+[functions.get-resume-url]
+verify_jwt = false

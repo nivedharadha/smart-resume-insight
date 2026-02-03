@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
@@ -11,7 +11,7 @@ interface AnalysisRecord {
   id: string;
   created_at: string;
   resume_file_name: string;
-  resume_file_url: string;
+  resume_file_url: string; // Now stores the file name, not the signed URL
   job_description: string;
   match_percentage: number;
   extracted_skills: string[];
@@ -28,6 +28,45 @@ const Results = () => {
   const [record, setRecord] = useState<AnalysisRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [resumeUrl, setResumeUrl] = useState<string | null>(null);
+  const [loadingResumeUrl, setLoadingResumeUrl] = useState(false);
+
+  // Fetch a fresh signed URL for the resume file on-demand
+  const fetchResumeUrl = useCallback(async () => {
+    if (!id || !token) return;
+    
+    setLoadingResumeUrl(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("get-resume-url", {
+        body: { recordId: id, accessToken: token }
+      });
+
+      if (error || data?.error) {
+        console.error("Failed to get resume URL:", error || data?.error);
+        toast({
+          title: "Error",
+          description: "Failed to load resume file",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.signedUrl) {
+        setResumeUrl(data.signedUrl);
+        // Open in new tab
+        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (error) {
+      console.error("Error fetching resume URL:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load resume file",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingResumeUrl(false);
+    }
+  }, [id, token, toast]);
 
   useEffect(() => {
     const fetchRecord = async () => {
@@ -178,16 +217,19 @@ const Results = () => {
           </div>
           
           <div className="flex gap-3">
-            <a
-              href={record.resume_file_url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchResumeUrl}
+              disabled={loadingResumeUrl}
             >
-              <Button variant="outline" size="sm">
+              {loadingResumeUrl ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
                 <Download className="mr-2 h-4 w-4" />
-                View Resume
-              </Button>
-            </a>
+              )}
+              View Resume
+            </Button>
             <Link to="/">
               <Button size="sm" className="gradient-primary text-primary-foreground">
                 Analyze Another
